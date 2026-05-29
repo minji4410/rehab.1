@@ -1,0 +1,217 @@
+import os
+
+desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+project_dir = os.path.join(desktop_path, "rehab-project")
+images_dir = os.path.join(project_dir, "images")
+os.makedirs(images_dir, exist_ok=True)
+
+combined_code = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스마트 코어 재활 페이서 시스템</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background: #121212; color: #fff; text-align: center; padding: 15px; margin: 0; transition: background 0.2s; }
+        .view-panel { display: none; }
+        .admin-box { background: #1e1e1e; padding: 20px; border-radius: 12px; margin: 10px auto; max-width: 600px; border: 1px solid #333; }
+        .admin-box h3 { border-bottom: 2px solid #333; padding-bottom: 10px; color: #aaa; margin-top: 0; }
+        .btn-ex { background: #2a2a2a; color: #fff; border: 1px solid #444; padding: 12px 18px; margin: 5px; font-size: 14px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-active { background: #4CAF50 !important; color: #000 !important; border-color: #4CAF50 !important; }
+        .btn-count { background: #FF9800 !important; color: #000 !important; font-size: 22px; padding: 20px 45px; border: none; border-radius: 8px; margin-top: 15px; cursor: pointer; font-weight: bold; }
+        #admin-status { font-size: 18px; font-weight: bold; color: #FF9800; background: #2a1b0a; padding: 8px; border-radius: 6px; display: inline-block; margin-top: 10px; }
+        .container { max-width: 480px; margin: 0 auto; padding-bottom: 40px; }
+        .target-box { background: #1a237e; border: 1px solid #303f9f; border-radius: 10px; padding: 12px; margin-bottom: 15px; font-size: 13px; line-height: 1.5; text-align: left; }
+        .exercise-title { font-size: 22px; font-weight: bold; color: #4CAF50; margin: 15px 0 10px 0; }
+        .badge { background: #222; border: 1px solid #444; padding: 6px 12px; border-radius: 20px; display: inline-block; font-size: 13px; color: #aaa; margin-bottom: 10px; }
+        .method-box { background: #1e1e1e; border-left: 5px solid #4CAF50; padding: 12px; text-align: left; font-size: 14px; line-height: 1.6; border-radius: 4px; margin-bottom: 15px; }
+        .check-box { background: #2a1a1a; border-left: 5px solid #f44336; padding: 12px; text-align: left; font-size: 13px; line-height: 1.5; border-radius: 4px; margin-bottom: 15px; color: #ffcdd2; }
+        .image-box img { width: 100%; max-height: 260px; object-fit: contain; border-radius: 8px; border: 1px solid #333; background: #000; }
+        .count-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; flex-direction: column; justify-content: center; align-items: center; z-index: 100; padding: 20px; box-sizing: border-box; }
+        .count-text { font-size: 44px; font-weight: bold; text-shadow: 2px 2px 8px rgba(0,0,0,0.8); }
+        .count-num { font-size: 90px; font-weight: 900; margin-top: 15px; }
+        .cue-text { font-size: 18px; margin-top: 20px; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 30px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body>
+
+    <div id="admin-view" class="view-panel">
+        <h2 style="color: #4CAF50;">🚨 재활 프로토콜 마스터 컨트롤러</h2>
+        <div class="admin-box">
+            <h3>1단계: 운동 단계 원격 제어</h3>
+            <button class="btn-ex" onclick="changeExercise('warmup', this)">② 준비운동 (흉추 로테이션)</button>
+            <button class="btn-ex" onclick="changeExercise('hooklying', this)">③ 본운동 1️⃣ (Hook lying + 링)</button>
+            <button class="btn-ex" onclick="changeExercise('seated_rot', this)">③ 본운동 2️⃣ (Seated Rotation)</button>
+            <button class="btn-ex" onclick="changeExercise('lunge', this)">③ 본운동 3️⃣ (런지 PNF 패턴)</button>
+            <button class="btn-ex" onclick="changeExercise('dual_task', this)">③ 본운동 4️⃣ (시각 반응 교란)</button>
+            <button class="btn-ex" onclick="changeExercise('cooldown', this)">④ 마무리운동 (Standing Roll Down)</button>
+        </div>
+        <div class="admin-box">
+            <h3>2단계: 실시간 호흡 페이스 드라이브</h3>
+            <div><span id="admin-status">대기 중 (환자 자세 세팅 기간)</span></div><br>
+            <button class="btn-count" onclick="triggerCount()">⏱️ 카운트 진행 (다음 호흡 전송)</button>
+            <button onclick="resetCount()" style="background: #f44336; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">초기화</button>
+        </div>
+    </div>
+
+    <div id="student-view" class="view-panel">
+        <div class="container">
+            <div class="target-box">
+                <strong>🎯 대상 선수:</strong> 골프·야구 등 반복 회전 종목 선수 중 요추 불안정성/만성 요통(LBP) 환자<br>
+                <strong>🎯 목적:</strong> 요추 고정(Stiffness) + 흉추 회전 분리(Dissociation) → 앞먹임 기전 재설정
+            </div>
+            <div id="exercise-display" style="display: none;">
+                <div class="exercise-title" id="ex-title">운동 단계</div>
+                <div class="badge" id="ex-info">정보</div>
+                <div class="method-box"><strong>🏃 수행 방법:</strong><br><span id="ex-method">방법</span></div>
+                <div class="check-box"><strong>🔍 파트너 체크리스트:</strong><br><span id="ex-check">체크</span></div>
+                <div class="image-box"><img id="ex-img" src="" alt="가이드 사진"></div>
+            </div>
+            <div id="welcome-message" style="font-size: 16px; margin-top: 60px; color: #aaa; line-height: 1.6;">
+                <strong style="color: #4CAF50; font-size: 20px;">스마트 코어 재활 페이서</strong><br><br>
+                발표자가 리모컨으로 운동을 전환할 때까지 대기해 주세요.<br><br>
+                <span style="font-size:13px; color:#ef5350; font-weight: bold;">⚠️ 필독: 발표자의 핸드폰 핫스팟 와이파이에 연결되어 있어야 실시간으로 동기화됩니다!</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="count-overlay" id="count-view">
+        <div class="count-text" id="breath-text">호흡 상태</div>
+        <div class="count-num" id="count-number">0</div>
+        <div class="cue-text" id="cue-display">치료사 큐잉</div>
+    </div>
+
+    <script>
+        const bc = new BroadcastChannel('rehab_pacer_channel');
+        
+        const protocolData = {
+            warmup: { 
+                title: "② 준비운동: 드로우-인 네발기기 + 흉추 로테이션", 
+                info: "도구: 없음 | 횟수: 좌우 각 3회 1세트", 
+                method: "네발기기에서 배꼽을 당겨 요추를 고정한 채, 한 손을 머리 뒤에 대고 상체만 하늘 향해 회전.", 
+                check: "허리 비틀림이나 골반의 좌우 흔들림 모니터링", 
+                cue: "“허리 위 막대기가 떨어지지 않게 고정! 가슴만 천장 향해 돌리세요.”", 
+                img: "images/warmup.jpg" 
+            },
+            hooklying: { 
+                title: "③ 본운동 1️⃣: Hook lying + 필라테스 링 드로우-인", 
+                info: "도구: 필라테스 링 | 횟수: 6회 1세트", 
+                method: "갈고리 누운 자세에서 무릎 사이 링 장착. 숨 내쉬며 링을 조임과 동시에 배꼽을 척추 쪽으로 드로우-인.", 
+                check: "허리를 과도하게 바닥에 누르는지, 대둔근이 과개입하는지 확인", 
+                cue: "“허리 가볍게 밀착되는 임프린팅 유지! 지퍼 채우듯 아랫배와 허벅지 안쪽 조이세요.”", 
+                img: "images/hooklying.jpg" 
+            },
+            seated_rot: { 
+                title: "③ 본운동 2️⃣: Seated Rotation", 
+                info: "도구: 필라테스 링 | 횟수: 좌우 각 4회 1세트", 
+                method: "바르게 앉아 가슴 앞에 링을 쥐고, 하체는 완벽히 고정한 채 오직 흉추만 좌우로 회전.", 
+                check: "뒤에서 환자 무릎과 골반이 밀려나가거나 회전 방향으로 따라가지 않게 고정", 
+                cue: "“척추는 대나무처럼 곧게 수직 유지, 가슴 면만 돌리세요.”", 
+                img: "images/seated_rot.jpg" 
+            },
+            lunge: { 
+                title: "③ 본운동 3️⃣: 런지 + 세라밴드 PNF 패턴", 
+                info: "도구: 세라밴드 | 횟수: 좌우 각 5회 1세트", 
+                method: "골반 정렬 유지를 위해 무릎 45~60도 미니 런지 유지. 브레이싱 잡고 밴드를 대각선 상방으로 당김.", 
+                check: "대각선 저항 시 환자의 요추 과전만이나 무릎 정렬(Valgus) 붕괴 확인", 
+                cue: "“외력이 흔들어도 체간 강직성 유지! 앞쪽 무릎과 발가락 일직선 유지하세요.”", 
+                img: "images/lunge.jpg" 
+            },
+            dual_task: { 
+                title: "③ 본운동 4️⃣: 시각 반응형 이중과제 교란 훈련", 
+                info: "도구: 필라테스 링 | 횟수: 무작위 총 8회 1세트", 
+                method: "와이드 스쿼트 자세로 하체 고정 후 링 쥐고 대기. 치료사가 무작위로 손 뻗으면 흉추를 뻗어 링 안으로 조준.", 
+                check: "손 뻗을 때 요추에서 회전이나 전단력(Shear force)이 발생하는지 모니터링", 
+                cue: "“치료사 손 끝까지 보고, 손 나오는 순간 배에 힘주어 몸통 미동 없이 조준하세요.”", 
+                img: "images/coordination.jpg" 
+            },
+            cooldown: { 
+                title: "④ 마무리운동: Standing Roll Down & Up with Ring", 
+                info: "도구: 필라테스 링 | 횟수: 2회 반복", 
+                method: "선 자세에서 숨 내쉬며 머리→등→허리 순으로 말아 내려감. 올라올 땐 링 조이며 아랫배 당겨 하나씩 척추 쌓아올림.", 
+                check: "올라올 때 링 조이는 힘으로 요추 불안정 분절 흔들림 없이 바르게 정렬되는지 확인", 
+                cue: "“내려갈 땐 자전거 체인처럼 마디마디, 올라올 땐 링 조이며 아랫배 쏙 넣어 동전 쌓듯 일어서세요.”", 
+                img: "images/cooldown.jpg" 
+            }
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode');
+
+        if (mode === 'admin') {
+            document.getElementById('admin-view').style.display = 'block';
+        } else {
+            document.getElementById('student-view').style.display = 'block';
+        }
+
+        let currentCount = 0; let currentEx = '';
+        function changeExercise(ex, btn) {
+            currentEx = ex; currentCount = 0;
+            document.getElementById('admin-status').innerText = "대기 중 (환자 자세 세팅 기간)";
+            document.querySelectorAll('.btn-ex').forEach(b => b.classList.remove('btn-active'));
+            btn.classList.add('btn-active');
+            bc.postMessage({ type: 'CHANGE_EXERCISE', exercise: ex });
+        }
+        function triggerCount() {
+            if(!currentEx) { alert('운동 단계를 먼저 선택해 주세요!'); return; }
+            currentCount++;
+            let text = currentCount % 2 !== 0 ? "코로 마시고 (흡기)" : "입으로 내쉬며 후-! (호기)";
+            document.getElementById('admin-status').innerText = `${currentCount}회차 - ${text}`;
+            bc.postMessage({ type: 'UPDATE_COUNT', count: currentCount });
+        }
+        function resetCount() {
+            currentCount = 0; document.getElementById('admin-status').innerText = "대기 중";
+            bc.postMessage({ type: 'UPDATE_COUNT', count: 0 });
+        }
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep(freq) {
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.frequency.value = freq; gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+        }
+        let activeEx = '';
+        bc.onmessage = function (e) {
+            if (mode === 'admin') return;
+            const data = e.data;
+            if (data.type === 'CHANGE_EXERCISE') {
+                activeEx = data.exercise;
+                document.getElementById('welcome-message').style.display = 'none';
+                document.getElementById('exercise-display').style.display = 'block';
+                document.getElementById('count-view').style.display = 'none'; 
+                const ex = protocolData[activeEx];
+                document.getElementById('ex-title').innerText = ex.title;
+                document.getElementById('ex-info').innerText = ex.info;
+                document.getElementById('ex-method').innerHTML = ex.method;
+                document.getElementById('ex-check').innerHTML = ex.check;
+                document.getElementById('ex-img').src = ex.img;
+                document.body.style.background = '#121212';
+            }
+            if (data.type === 'UPDATE_COUNT') {
+                if (data.count === 0) {
+                    document.getElementById('count-view').style.display = 'none';
+                    document.body.style.background = '#121212'; return;
+                }
+                const ex = protocolData[activeEx];
+                document.getElementById('count-view').style.display = 'flex';
+                document.getElementById('count-number').innerText = data.count;
+                document.getElementById('cue-display').innerText = ex.cue;
+                if (data.count % 2 !== 0) {
+                    document.getElementById('count-view').style.backgroundColor = '#1E3A8A';
+                    document.getElementById('breath-text').innerText = "👃 코로 숨 깊게 마시기";
+                    playBeep(440); 
+                } else {
+                    document.getElementById('count-view').style.backgroundColor = '#9A3412';
+                    if(activeEx === 'lunge') { document.getElementById('breath-text').innerText = "💨 당기면서 후-!!! (복압 고정)"; }
+                    else { document.getElementById('breath-text').innerText = "💨 입으로 길게 내쉬기 (후/하)"; }
+                    playBeep(880);
+                }
+            }
+        };
+    </script>
+</body>
+</html>"""
+
+with open(os.path.join(project_dir, "index.html"), "w", encoding="utf-8") as f:
+    f.write(combined_code)
